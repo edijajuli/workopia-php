@@ -35,10 +35,10 @@
 
                 </li>
                 <?php if (!empty($listing['tags'])) : ?>
-                    <li class="mb-2">
-                        <strong>Tags:</strong> <?= $listing['tags']; ?>
+                <li class="mb-2">
+                    <strong>Tags:</strong> <?= $listing['tags']; ?>
                     <?php endif; ?>
-                    </li>
+                </li>
             </ul>
         </div>
     </div>
