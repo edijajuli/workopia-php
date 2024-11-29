@@ -39,10 +39,10 @@ class Validation
 
     /**
      * Match a value against another
-     * @param string $value
+     * @param string $value1
+     * @param string $value2
      * @return bool
      */
-
     public static function match($value1, $value2)
     {
         $value1 = trim($value1);
