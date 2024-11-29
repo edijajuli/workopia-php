@@ -3,146 +3,150 @@
 namespace Framework;
 
 use App\Controllers\ErrorController;
+use Framework\Middleware\Authorize;
 
 class Router
 {
     protected $routes = [];
 
     /**
-     * Add new route
+     * Add a new route
+     *
      * @param string $method
      * @param string $uri
      * @param string $action
+     * @param array $middleware
+     * 
      * @return void
      */
-
-    public function regiterRoute($method, $uri, $action)
+    public function registerRoute($method, $uri, $action, $middleware = [])
     {
         list($controller, $controllerMethod) = explode('@', $action);
+
         $this->routes[] = [
             'method' => $method,
             'uri' => $uri,
             'controller' => $controller,
-            'controllerMethod' => $controllerMethod
+            'controllerMethod' => $controllerMethod,
+            'middleware' => $middleware
         ];
     }
 
     /**
-     *  Add a Get route
+     * Add a GET route
+     * 
      * @param string $uri
      * @param string $controller
+     * @param array $middleware
+     * @return void
      */
-
-    public function get($uri, $controller)
+    public function get($uri, $controller, $middleware = [])
     {
-        $this->regiterRoute('GET', $uri, $controller);
+        $this->registerRoute('GET', $uri, $controller, $middleware);
     }
 
     /**
-     *  Add a POST route
+     * Add a POST route
+     * 
      * @param string $uri
      * @param string $controller
+     * @param array $middleware
+     * 
+     * @return void
      */
-
-    public function post($uri, $controller)
+    public function post($uri, $controller, $middleware = [])
     {
-        $this->regiterRoute('POST', $uri, $controller);
+        $this->registerRoute('POST', $uri, $controller, $middleware);
     }
 
     /**
-     *  Add a put route
+     * Add a PUT route
+     * 
      * @param string $uri
      * @param string $controller
+     * @param array $middleware
+     * 
+     * @return void
      */
-
-    public function PUT($uri, $controller)
+    public function put($uri, $controller, $middleware = [])
     {
-        $this->regiterRoute('PUT', $uri, $controller);
+        $this->registerRoute('PUT', $uri, $controller, $middleware);
     }
 
     /**
-     *  Add a DELETE route
+     * Add a DELETE route
+     * 
      * @param string $uri
      * @param string $controller
+     * @param array $middleware
+     * 
+     * @return void
      */
-
-    public function delete($uri, $controller)
+    public function delete($uri, $controller, $middleware = [])
     {
-        $this->regiterRoute('DELETE', $uri, $controller);
+        $this->registerRoute('DELETE', $uri, $controller, $middleware);
     }
-
 
     /**
      * Route the request
+     * 
      * @param string $uri
-     * @param string $$method
+     * @param string $method
      * @return void
      */
-
     public function route($uri)
     {
         $requestMethod = $_SERVER['REQUEST_METHOD'];
 
         // Check for _method input
-        if ($requestMethod == 'POST' && isset($_POST['_method'])) {
+        if ($requestMethod === 'POST' && isset($_POST['_method'])) {
             // Override the request method with the value of _method
             $requestMethod = strtoupper($_POST['_method']);
         }
 
         foreach ($this->routes as $route) {
+
             // Split the current URI into segments
             $uriSegments = explode('/', trim($uri, '/'));
-            // inspectAndDie($uriSegments[1]);
 
             // Split the route URI into segments
             $routeSegments = explode('/', trim($route['uri'], '/'));
-            // inspect($routeSegments);
 
             $match = true;
 
-            // Check if the cnumber of segments match
-            if (count($uriSegments) === count($routeSegments) && strtoupper($route['method']) === $requestMethod) {
+            // Check if the number of segments matches
+            if (count($uriSegments) === count($routeSegments) && strtoupper($route['method'] === $requestMethod)) {
                 $params = [];
+
                 $match = true;
-                // If the uri's do not match and there are no param
+
                 for ($i = 0; $i < count($uriSegments); $i++) {
+                    // If the uri's do not match and there is no param
                     if ($routeSegments[$i] !== $uriSegments[$i] && !preg_match('/\{(.+?)\}/', $routeSegments[$i])) {
                         $match = false;
                         break;
                     }
-                    // Check for the paramas and add to the params array
+
+                    // Check for the param and add to $params array
                     if (preg_match('/\{(.+?)\}/', $routeSegments[$i], $matches)) {
-                        // inspectAndDie($matches[1]);
-                        // inspectAndDie($uriSegments[$i]);
                         $params[$matches[1]] = $uriSegments[$i];
-                        // inspectAndDie($params);
                     }
                 }
+
                 if ($match) {
-                    // Extract controller and controller method
-                    $controller = 'App\\Controllers\\' . $route['controller'];
+                    foreach ($route['middleware'] as $middleware) {
+                        (new Authorize())->handle($middleware);
+                    }
+
+                    $controller = 'App\\controllers\\' . $route['controller'];
                     $controllerMethod = $route['controllerMethod'];
 
-                    // Instantiate the controller and call the method
+                    // Instatiate the controller and call the method
                     $controllerInstance = new $controller();
                     $controllerInstance->$controllerMethod($params);
                     return;
                 }
             }
-
-
-            // if ($route) {
-            //     if ($route['uri'] === $uri && $route['method'] === $method) {
-            //         //Extract controller and controller method
-            //         $controller = 'App\\Controllers\\' . $route['controller'];
-            //         $controllerMethod = $route['controllerMethod'];
-
-            //         // Instantiate the controller and call the method
-            //         $controllerInstance = new $controller();
-            //         $controllerInstance->$controllerMethod();
-            //         return;
-            //     }
-            // }
         }
 
         ErrorController::notFound();
